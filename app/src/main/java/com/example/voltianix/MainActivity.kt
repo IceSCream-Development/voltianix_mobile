@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.icescream.voltianix.ui.MapScreen
 import com.icescream.voltianix.ui.theme.VoltianixTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -22,8 +23,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             VoltianixTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
+                    MapScreen(
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
