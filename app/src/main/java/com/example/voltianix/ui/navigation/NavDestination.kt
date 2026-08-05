@@ -1,6 +1,6 @@
 package com.icescream.voltianix.ui.navigation
 
-import androidx.compose.material.icons.Icons
+import androidx.compose.material. icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Map
