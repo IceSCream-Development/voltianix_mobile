@@ -48,6 +48,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.hilt.android)
     implementation(libs.osmdroid)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.compose.material.icons.extended)
     ksp(libs.hilt.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
