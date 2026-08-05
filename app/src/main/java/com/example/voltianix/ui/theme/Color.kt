@@ -1,4 +1,4 @@
-package com.example.voltianix.ui.theme
+package com.icescream.voltianix.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
