@@ -1,4 +1,4 @@
-package com.example.voltianix
+package com.icescream.voltianix
 
 import org.junit.Test
 
