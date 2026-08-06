@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -16,44 +17,48 @@ import androidx.compose.ui.unit.sp
 fun CustomHeader(
     title: String,
     subtitle: String? = null,
-    showProfileIcon: Boolean = false
+    showProfileIcon: Boolean = false,
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.primary)
-            .statusBarsPadding()
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        color = MaterialTheme.colorScheme.primary,
+        modifier = modifier.fillMaxWidth()
     ) {
-        Column {
-            Text(
-                text = title,
-                color = MaterialTheme.colorScheme.secondary,
-                fontSize = 18.sp
-            )
-            if (subtitle != null) {
+        Row(
+            modifier = Modifier
+                .statusBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 24.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
                 Text(
-                    text = subtitle,
-                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f),
-                    fontSize = 14.sp
-                )
-            }
-        }
-
-        if (showProfileIcon) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(color = Color(0xFF45BC75), shape = CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "M",
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    text = title,
+                    color = MaterialTheme.colorScheme.secondary,
                     fontSize = 20.sp
                 )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f),
+                        fontSize = 14.sp
+                    )
+                }
+            }
+
+            if (showProfileIcon) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(color = Color(0xFF45BC75), shape = CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "M",
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontSize = 20.sp
+                    )
+                }
             }
         }
     }

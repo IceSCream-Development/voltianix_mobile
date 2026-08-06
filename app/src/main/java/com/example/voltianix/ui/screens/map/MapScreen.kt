@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.BatteryChargingFull
@@ -20,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,15 +35,13 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Overlay
 
-val HeaderDarkGray = Color(0xFF4E4E4E)
 val SearchBarGray = Color(0xFF5E5E5E)
 val CustomGreen = Color(0xFF38C172)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
-    viewModel: FleetViewModel = viewModel(),
-    userName: String = "Miguel"
+    viewModel: FleetViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val vehicles by viewModel.vehicles.collectAsState()
@@ -230,37 +230,12 @@ fun MapScreen(
                 }
             )
 
-            // HEADER + BARRA DE BÚSQUEDA
+            // BARRA DE BÚSQUEDA
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
             ) {
-                // Header Gris
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(HeaderDarkGray)
-                        .statusBarsPadding()
-                        .padding(horizontal = 20.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text("Buenos días, $userName", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Medium)
-                        Text(selectedVehicle?.name ?: "EV-001", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(CustomGreen),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(userName.firstOrNull()?.toString()?.uppercase() ?: "M", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    }
-                }
-
                 // Search Bar
                 Surface(
                     modifier = Modifier
@@ -280,18 +255,33 @@ fun MapScreen(
                         ) {
                             Icon(Icons.Default.Menu, contentDescription = "Menú", tint = Color.White)
                         }
-                        TextField(
+                        BasicTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
-                            placeholder = { Text("Buscar", color = Color.Gray, fontSize = 14.sp) },
-                            modifier = Modifier.weight(1f),
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .padding(horizontal = 12.dp),
+                            singleLine = true,
+                            textStyle = TextStyle(
+                                color = Color.Black,
+                                fontSize = 14.sp
                             ),
-                            singleLine = true
+                            decorationBox = { innerTextField ->
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
+                                    if (searchQuery.isEmpty()) {
+                                        Text(
+                                            text = "Buscar",
+                                            color = Color.Gray,
+                                            fontSize = 14.sp
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            }
                         )
                         IconButton(onClick = {}) {
                             Icon(Icons.Default.Search, contentDescription = "Buscar", tint = Color.Gray)

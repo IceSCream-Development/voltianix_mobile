@@ -109,10 +109,7 @@ fun MainScreen() {
         NavHost(
             navController = navController,
             startDestination = NavDestination.Map.route,
-            modifier = Modifier
-                // ⚠️ SOLO conservamos el padding inferior (NavigationBar)
-                // Esto permite que el Header suba hasta el borde superior real de la pantalla
-                .padding(bottom = innerPadding.calculateBottomPadding())
+            modifier = Modifier.padding(innerPadding)
         ) {
             composable(NavDestination.Map.route) { MapScreen() }
             composable(NavDestination.Unit.route) { UnitScreen() }
