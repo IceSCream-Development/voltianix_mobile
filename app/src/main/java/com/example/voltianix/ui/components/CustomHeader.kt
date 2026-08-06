@@ -8,6 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -20,7 +21,7 @@ fun CustomHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(MaterialTheme.colorScheme.primary)
             .statusBarsPadding()
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -29,13 +30,13 @@ fun CustomHeader(
         Column {
             Text(
                 text = title,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.secondary,
                 fontSize = 18.sp
             )
             if (subtitle != null) {
                 Text(
                     text = subtitle,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f),
                     fontSize = 14.sp
                 )
             }
@@ -45,7 +46,7 @@ fun CustomHeader(
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .background(MaterialTheme.colorScheme.primary, shape = CircleShape),
+                    .background(color = Color(0xFF45BC75), shape = CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
