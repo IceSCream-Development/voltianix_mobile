@@ -94,16 +94,10 @@ fun MainScreen() {
                         selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true,
                         onClick = {
                             navController.navigate(destination.route) {
-                                // Pop up to the start destination of the graph to
-                                // avoid building up a large stack of destinations
-                                // on the back stack as users select items
                                 popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
                                 }
-                                // Avoid multiple copies of the same destination when
-                                // reselecting the same item
                                 launchSingleTop = true
-                                // Restore state when reselecting a previously selected item
                                 restoreState = true
                             }
                         }
@@ -115,7 +109,10 @@ fun MainScreen() {
         NavHost(
             navController = navController,
             startDestination = NavDestination.Map.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier
+                // ⚠️ SOLO conservamos el padding inferior (NavigationBar)
+                // Esto permite que el Header suba hasta el borde superior real de la pantalla
+                .padding(bottom = innerPadding.calculateBottomPadding())
         ) {
             composable(NavDestination.Map.route) { MapScreen() }
             composable(NavDestination.Unit.route) { UnitScreen() }

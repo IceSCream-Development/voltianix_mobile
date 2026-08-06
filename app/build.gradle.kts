@@ -8,9 +8,7 @@ plugins {
 
 android {
     namespace = "com.icescream.voltianix"
-    compileSdk {
-        version = release(37)
-    }
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.icescream.voltianix"
@@ -64,4 +62,7 @@ dependencies {
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
+    implementation("androidx.navigation:navigation-compose:2.8.0")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("com.google.firebase:firebase-firestore")
 }
