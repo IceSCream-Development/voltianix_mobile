@@ -46,13 +46,14 @@ fun MainScreen() {
                 }
                 NavDestination.Unit.route -> {
                     CustomHeader(
-                        title = "Consulta el estado completo de tu Unidad",
+                        title = "Unidad",
+                        subtitle = "Consulta el estado completo de tu Unidad",
                         showProfileIcon = false // Oculta el avatar
                     )
                 }
                 NavDestination.Alerts.route -> {
                     CustomHeader(
-                        title = "Alertas Recientes",
+                        title = "Alertas",
                         showProfileIcon = false // Oculta el avatar
                     )
                 }
