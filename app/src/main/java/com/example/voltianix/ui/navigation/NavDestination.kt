@@ -1,19 +1,16 @@
 package com.icescream.voltianix.ui.navigation
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.ui.graphics.vector.ImageVector
+import com.icescream.voltianix.R
+
 
 sealed class NavDestination(
     val route: String,
     val title: String,
-    val icon: ImageVector
+    val iconRes: Int
 ) {
-    object Map : NavDestination("map", "Inicio", Icons.Default.Map)
-    object Unit : NavDestination("unit", "Unidad", Icons.Default.DirectionsCar)
-    object Alerts : NavDestination("alerts", "Alertas", Icons.Default.Notifications)
+    object Map : NavDestination("map", "Inicio", R.drawable.home_icon)
+    object Unit : NavDestination("unit", "Unidad", R.drawable.unit_icon)
+    object Alerts : NavDestination("alerts", "Alertas", R.drawable.alert_icon)
 }
 
 val bottomNavDestinations = listOf(
