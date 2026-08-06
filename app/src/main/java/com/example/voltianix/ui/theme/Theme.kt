@@ -1,6 +1,5 @@
 package com.icescream.voltianix.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -12,15 +11,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = Grey80,
+    secondary = White80,
+    tertiary = Blue80,
+    outlineVariant = White80,
+    background = Dark40,
+    onBackground = White80
+
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    primary = Grey40,
+    secondary = White80,
+    tertiary = Blue40,
+    outlineVariant = Dark40,
+    background = White80,
+    onBackground = Dark40
+
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
@@ -37,7 +44,7 @@ private val LightColorScheme = lightColorScheme(
 fun VoltianixTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
