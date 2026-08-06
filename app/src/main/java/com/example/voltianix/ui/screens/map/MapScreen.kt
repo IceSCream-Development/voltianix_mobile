@@ -5,12 +5,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
@@ -20,16 +18,6 @@ import org.osmdroid.views.MapView
 fun MapScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val mapView = remember {
-
-        Configuration.getInstance().apply {
-            userAgentValue = context.packageName
-
-            cacheMapTileCount = 36
-            cacheMapTileOvershoot = 36
-
-            tileDownloadThreads = 4
-        }
-
         MapView(context).apply {
             setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)
