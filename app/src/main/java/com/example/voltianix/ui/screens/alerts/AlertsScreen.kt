@@ -2,8 +2,6 @@ package com.icescream.voltianix.ui.screens.alerts
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -12,21 +10,25 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PriorityHigh
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.tooling.preview.Preview
-import com.icescream.voltianix.ui.theme.Blue40
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.icescream.voltianix.data.model.Alert
 import com.icescream.voltianix.ui.theme.Green40
 import com.icescream.voltianix.ui.theme.LightBlue40
 import com.icescream.voltianix.ui.theme.Red40
@@ -40,7 +42,7 @@ val HexagonShape = GenericShape { size, _ ->
     val centerY = height / 2f
     val radius = minOf(width, height) / 2f
 
-    moveTo(centerX, centerY - radius) // Top point
+    moveTo(centerX, centerY - radius)
     lineTo(centerX + radius * 0.866f, centerY - radius * 0.5f)
     lineTo(centerX + radius * 0.866f, centerY + radius * 0.5f)
     lineTo(centerX, centerY + radius)
@@ -50,79 +52,98 @@ val HexagonShape = GenericShape { size, _ ->
 }
 
 @Composable
-fun AlertsScreen(modifier: Modifier = Modifier) {
+fun AlertsScreen(
+    modifier: Modifier = Modifier,
+    viewModel: AlertsViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    when (val state = uiState) {
+        is AlertsUiState.Loading -> {
+            Box(
+                modifier = modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Green40)
+            }
+        }
+        is AlertsUiState.Error -> {
+            Box(
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Error de conexión:\n${state.message}",
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 14.sp
+                )
+            }
+        }
+        is AlertsUiState.Success -> {
+            AlertsScreenContent(
+                modifier = modifier,
+                alerts = state.alerts
+            )
+        }
+    }
+}
+
+@Composable
+fun AlertsScreenContent(
+    modifier: Modifier = Modifier,
+    alerts: List<Alert>
+) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background), // Light background to contrast card
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.TopCenter
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 32.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            HistoryTab()
+        if (alerts.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No hay alertas registradas",
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                    fontSize = 16.sp
+                )
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 32.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                HistoryTab()
 
-            SectionDivider("Nuevo", true)
+                val sectionsOrder = listOf("Nuevo", "Esta Semana", "Este Mes", "Mes Pasado")
 
-            AlertCard(
-                title = "Diagnóstico Correcto",
-                description = "No se detectaron incidencias durante la última revisión.",
-                time = "11:22 PM",
-                date = "Agosto 04, 2026",
-                colorStatus = Green40
-            )
+                sectionsOrder.forEach { sectionTitle ->
+                    val sectionAlerts = alerts.filter { it.section.equals(sectionTitle, ignoreCase = true) }
 
-            SectionDivider("Esta Semana")
+                    if (sectionAlerts.isNotEmpty()) {
+                        SectionDivider(
+                            title = sectionTitle,
+                            itItsNew = sectionTitle.equals("Nuevo", ignoreCase = true)
+                        )
 
-            AlertCard(
-                title = "Mantenimiento Próximo",
-                description = "Faltan 450 km para el mantenimiento preventivo programado.",
-                time = "10:33 PM",
-                date = "Agosto 01, 2026",
-                colorStatus = Yellow40
-            )
-
-            SectionDivider("Este Mes")
-
-            AlertCard(
-                title = "Carga Completada",
-                description = "La batería alcanzó el 100% de carga.",
-                time = "1:12 PM",
-                date = "Julio 29, 2026",
-                colorStatus = LightBlue40
-            )
-
-            AlertCard(
-                title = "Baja Presión en Neumáticos",
-                description = "Se detectó una presión inferior a la recomendada en uno o más neumáticos.",
-                time = "5:39 PM",
-                date = "Julio 25, 2026",
-                colorStatus = Red40
-            )
-
-
-            AlertCard(
-                title = "Ruta Actualizada",
-                description = "Se ha asignado una nueva ruta para tu recorrido.",
-                time = "12:07 PM",
-                date = "Julio 21, 2026",
-                colorStatus = LightBlue40
-            )
-
-            SectionDivider("Mes Pasado")
-
-            AlertCard(
-                title = "Próxima Recarga",
-                description = "La batería ha descendido al 30%. Se recomienda planificar una " +
-                        "recarga en los próximos kilómetros.La batería ha descendido al 30%. Se " +
-                        "recomienda planificar una recarga en los próximos kilómetros.",
-                time = "8:45 PM",
-                date = "Junio 28, 2026",
-                colorStatus = Yellow40
-            )
+                        sectionAlerts.forEach { alert ->
+                            AlertCard(
+                                title = alert.title,
+                                description = alert.description,
+                                time = alert.time,
+                                date = alert.date,
+                                colorStatus = parseColorStatus(alert.colorStatusType)
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -149,7 +170,6 @@ fun AlertCard(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.Top
         ) {
-            // Icon section
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -175,7 +195,6 @@ fun AlertCard(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Text section
             Column(
                 modifier = Modifier.weight(1f)
             ) {
@@ -219,7 +238,7 @@ fun AlertCard(
 }
 
 @Composable
-fun HistoryTab(){
+fun HistoryTab() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -263,6 +282,16 @@ fun SectionDivider(title: String, itItsNew: Boolean = false) {
             fontSize = 16.sp,
             color = MaterialTheme.colorScheme.onBackground.copy(0.7f)
         )
+    }
+}
+
+private fun parseColorStatus(type: String): Color {
+    return when (type.uppercase()) {
+        "GREEN" -> Green40
+        "YELLOW" -> Yellow40
+        "BLUE" -> LightBlue40
+        "RED" -> Red40
+        else -> Green40
     }
 }
 

@@ -2,10 +2,10 @@ package com.icescream.voltianix.ui.screens.map
 
 import android.view.MotionEvent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.BatteryChargingFull
@@ -21,12 +21,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.icescream.voltianix.ui.FleetViewModel
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -41,7 +40,7 @@ val CustomGreen = Color(0xFF38C172)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
-    viewModel: FleetViewModel = viewModel()
+    viewModel: FleetViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val vehicles by viewModel.vehicles.collectAsState()
@@ -55,6 +54,15 @@ fun MapScreen(
 
     val scaffoldState = rememberBottomSheetScaffoldState()
 
+    // --- MODO OSCURO DINÁMICO (Para UI de Compose) ---
+    val isDark = isSystemInDarkTheme()
+    val cardBackground = if (isDark) Color(0xFF2D2D2D) else Color.White
+    val textColor = if (isDark) Color.White else Color(0xFF2B2B2B)
+    val subtitleColor = if (isDark) Color(0xFFA0A0A0) else Color.Gray
+    val searchBarBg = if (isDark) Color(0xFF2D2D2D) else Color.White
+    val searchIconBg = if (isDark) Color(0xFF3E3E3E) else SearchBarGray
+    val dividerColor = if (isDark) Color(0xFF3E3E3E) else Color(0xFFE0E0E0)
+
     LaunchedEffect(Unit) {
         Configuration.getInstance().userAgentValue = context.packageName
     }
@@ -63,7 +71,7 @@ fun MapScreen(
         scaffoldState = scaffoldState,
         sheetPeekHeight = 90.dp,
         sheetShape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        sheetContainerColor = Color.White,
+        sheetContainerColor = cardBackground,
         sheetContent = {
             // --- CONTENIDO DESPLEGABLE DE LA TARJETA ---
             Column(
@@ -75,11 +83,11 @@ fun MapScreen(
                     text = selectedVehicle?.name ?: "EV-001",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2B2B2B)
+                    color = textColor
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider(color = Color(0xFFE0E0E0), thickness = 1.dp)
+                HorizontalDivider(color = dividerColor, thickness = 1.dp)
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // 1. ESTADO
@@ -88,15 +96,15 @@ fun MapScreen(
                         modifier = Modifier
                             .size(10.dp)
                             .clip(CircleShape)
-                            .background(Color.Black)
+                            .background(textColor)
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
-                        Text("Estado", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF333333))
+                        Text("Estado", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = textColor)
                         Text(
                             text = if (selectedVehicle?.status == "en_ruta") "En Ruta" else selectedVehicle?.status ?: "En Ruta",
                             fontSize = 13.sp,
-                            color = Color.Gray
+                            color = subtitleColor
                         )
                     }
                 }
@@ -109,12 +117,12 @@ fun MapScreen(
                     Icon(
                         imageVector = Icons.Default.BatteryChargingFull,
                         contentDescription = "Batería",
-                        tint = Color.Black,
+                        tint = textColor,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Batería", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF333333))
+                        Text("Batería", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = textColor)
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             LinearProgressIndicator(
@@ -124,13 +132,13 @@ fun MapScreen(
                                     .height(8.dp)
                                     .clip(RoundedCornerShape(4.dp)),
                                 color = CustomGreen,
-                                trackColor = Color(0xFFE0E0E0)
+                                trackColor = dividerColor
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 text = "$batteryVal%",
                                 fontSize = 13.sp,
-                                color = Color.Gray,
+                                color = subtitleColor,
                                 fontWeight = FontWeight.Medium
                             )
                         }
@@ -145,13 +153,13 @@ fun MapScreen(
                     Icon(
                         imageVector = Icons.Default.FlashOn,
                         contentDescription = "Autonomía",
-                        tint = Color.Black,
+                        tint = textColor,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
-                        Text("Autonomía Restante", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF333333))
-                        Text("$rangeKm km", fontSize = 13.sp, color = Color.Gray)
+                        Text("Autonomía Restante", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = textColor)
+                        Text("$rangeKm km", fontSize = 13.sp, color = subtitleColor)
                     }
                 }
 
@@ -162,13 +170,13 @@ fun MapScreen(
                     Icon(
                         imageVector = Icons.Default.AccessTime,
                         contentDescription = "Recarga",
-                        tint = Color.Black,
+                        tint = textColor,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
-                        Text("Próxima Recarga Recomendada", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF333333))
-                        Text("18 km", fontSize = 13.sp, color = Color.Gray)
+                        Text("Próxima Recarga Recomendada", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = textColor)
+                        Text("${selectedVehicle?.nextChargeKm ?: 18} km", fontSize = 13.sp, color = subtitleColor)
                     }
                 }
 
@@ -192,11 +200,11 @@ fun MapScreen(
                         controller.setZoom(15.0)
                         controller.setCenter(GeoPoint(21.88234, -102.28259))
 
-                        // Overlay para capturar cuando el usuario arrastra o interactúa libremente con el mapa
+                        // Overlay para capturar cuando el usuario arrastra libremente el mapa
                         val touchOverlay = object : Overlay() {
                             override fun onTouchEvent(event: MotionEvent?, mapView: MapView?): Boolean {
                                 if (event?.action == MotionEvent.ACTION_MOVE) {
-                                    isTrackingVehicle = false // Se desactiva el seguimiento automático al mover el mapa
+                                    isTrackingVehicle = false
                                 }
                                 return false
                             }
@@ -230,61 +238,53 @@ fun MapScreen(
                 }
             )
 
-            // BARRA DE BÚSQUEDA
+            // BARRA DE BÚSQUEDA FLOTANTE
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
+                    .statusBarsPadding()
             ) {
-                // Search Bar
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     shape = RoundedCornerShape(8.dp),
-                    color = Color.White,
+                    color = searchBarBg,
                     shadowElevation = 4.dp
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
-                            modifier = Modifier.fillMaxHeight().width(48.dp).background(SearchBarGray),
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .width(48.dp)
+                                .background(searchIconBg),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(Icons.Default.Menu, contentDescription = "Menú", tint = Color.White)
                         }
-                        BasicTextField(
+                        TextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .padding(horizontal = 12.dp),
-                            singleLine = true,
-                            textStyle = TextStyle(
-                                color = Color.Black,
-                                fontSize = 14.sp
+                            placeholder = { Text("Buscar", color = subtitleColor, fontSize = 14.sp) },
+                            modifier = Modifier.weight(1f),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                focusedTextColor = textColor,
+                                unfocusedTextColor = textColor
                             ),
-                            decorationBox = { innerTextField ->
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.CenterStart
-                                ) {
-                                    if (searchQuery.isEmpty()) {
-                                        Text(
-                                            text = "Buscar",
-                                            color = Color.Gray,
-                                            fontSize = 14.sp
-                                        )
-                                    }
-                                    innerTextField()
-                                }
-                            }
+                            singleLine = true
                         )
                         IconButton(onClick = {}) {
-                            Icon(Icons.Default.Search, contentDescription = "Buscar", tint = Color.Gray)
+                            Icon(Icons.Default.Search, contentDescription = "Buscar", tint = subtitleColor)
                         }
                     }
                 }
@@ -301,26 +301,25 @@ fun MapScreen(
             ) {
                 FloatingActionButton(
                     onClick = { /* Estaciones */ },
-                    containerColor = Color.White,
-                    contentColor = Color(0xFF4A4A4A),
+                    containerColor = searchBarBg,
+                    contentColor = if (isDark) Color.White else Color(0xFF4A4A4A),
                     modifier = Modifier.size(48.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(Icons.Outlined.EvStation, contentDescription = "Estaciones")
                 }
 
-                // Botón de mi ubicación (Activa nuevamente el seguimiento constante y centra el mapa)
                 FloatingActionButton(
                     onClick = {
                         selectedVehicle?.let { vehicle ->
-                            isTrackingVehicle = true // Reactiva el seguimiento constante
+                            isTrackingVehicle = true
                             mapViewRef?.controller?.animateTo(
                                 GeoPoint(vehicle.location.latitude, vehicle.location.longitude)
                             )
                         }
                     },
-                    containerColor = Color.White,
-                    contentColor = if (isTrackingVehicle) CustomGreen else Color(0xFF4A4A4A),
+                    containerColor = searchBarBg,
+                    contentColor = if (isTrackingVehicle) CustomGreen else if (isDark) Color.White else Color(0xFF4A4A4A),
                     modifier = Modifier.size(48.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
