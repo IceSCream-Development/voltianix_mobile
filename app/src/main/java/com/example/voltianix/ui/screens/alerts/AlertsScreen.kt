@@ -54,7 +54,7 @@ fun AlertsScreen(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFF8F9FA)), // Light background to contrast card
+            .background(MaterialTheme.colorScheme.background), // Light background to contrast card
         contentAlignment = Alignment.TopCenter
     ) {
         Column(
@@ -140,7 +140,7 @@ fun AlertCard(
             .fillMaxWidth()
             .padding(vertical = 8.dp),
         shape = RoundedCornerShape(12.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.background,
         border = BorderStroke(1.dp, Color(0xFFEEEEEE))
     ) {
         Row(
@@ -188,12 +188,12 @@ fun AlertCard(
                         text = title,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF2D2D2D)
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
                         text = time,
                         fontSize = 10.sp,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onBackground.copy(0.7f)
                     )
                 }
 
@@ -202,7 +202,7 @@ fun AlertCard(
                 Text(
                     text = description,
                     fontSize = 14.sp,
-                    color = Color(0xFF555555),
+                    color = MaterialTheme.colorScheme.onBackground,
                     lineHeight = 20.sp
                 )
 
@@ -211,7 +211,7 @@ fun AlertCard(
                 Text(
                     text = date,
                     fontSize = 12.sp,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onBackground.copy(0.7f)
                 )
             }
         }
