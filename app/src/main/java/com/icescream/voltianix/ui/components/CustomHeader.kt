@@ -9,7 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import com.icescream.voltianix.ui.theme.Green40
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -18,6 +18,7 @@ fun CustomHeader(
     title: String,
     subtitle: String? = null,
     showProfileIcon: Boolean = false,
+    avatarInitial: String = "",
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -50,11 +51,11 @@ fun CustomHeader(
                 Box(
                     modifier = Modifier
                         .size(48.dp)
-                        .background(color = Color(0xFF45BC75), shape = CircleShape),
+                        .background(color = Green40, shape = CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "M",
+                        text = avatarInitial,
                         color = MaterialTheme.colorScheme.onPrimary,
                         fontSize = 20.sp
                     )

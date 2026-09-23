@@ -1,5 +1,6 @@
 package com.icescream.voltianix.ui
 
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +22,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.icescream.voltianix.data.FleetConfig
+import com.icescream.voltianix.data.model.DemoUserData
 import com.icescream.voltianix.ui.components.CustomHeader
 import com.icescream.voltianix.ui.navigation.NavDestination
 import com.icescream.voltianix.ui.navigation.bottomNavDestinations
@@ -39,9 +42,11 @@ fun MainScreen() {
             when (currentRoute) {
                 NavDestination.Map.route -> {
                     CustomHeader(
-                        title = "Buenos días, Miguel",
-                        subtitle = "EV-001",
-                        showProfileIcon = true
+                        // El nombre y la inicial son datos de demo; ver DemoUserData.
+                        title = "Buenos días, ${DemoUserData.GREETING_NAME}",
+                        subtitle = FleetConfig.DEFAULT_VEHICLE_ID,
+                        showProfileIcon = true,
+                        avatarInitial = DemoUserData.AVATAR_INITIAL
                     )
                 }
                 NavDestination.Unit.route -> {
@@ -109,7 +114,11 @@ fun MainScreen() {
         NavHost(
             navController = navController,
             startDestination = NavDestination.Map.route,
-            modifier = Modifier.padding(innerPadding)
+            // consumeWindowInsets evita que las pantallas vuelvan a sumar el alto de la
+            // barra de estado que el Scaffold ya descontó.
+            modifier = Modifier
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
         ) {
             composable(NavDestination.Map.route) { MapScreen() }
             composable(NavDestination.Unit.route) { UnitScreen() }

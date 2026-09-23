@@ -10,15 +10,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PriorityHigh
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,7 +27,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.icescream.voltianix.data.model.Alert
+import com.icescream.voltianix.data.model.groupAlertsBySection
+import com.icescream.voltianix.ui.UiState
+import com.icescream.voltianix.ui.components.EmptyState
+import com.icescream.voltianix.ui.components.ErrorState
+import com.icescream.voltianix.ui.components.LoadingState
 import com.icescream.voltianix.ui.theme.Green40
 import com.icescream.voltianix.ui.theme.LightBlue40
 import com.icescream.voltianix.ui.theme.Red40
@@ -56,37 +61,20 @@ fun AlertsScreen(
     modifier: Modifier = Modifier,
     viewModel: AlertsViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     when (val state = uiState) {
-        is AlertsUiState.Loading -> {
-            Box(
-                modifier = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = Green40)
-            }
-        }
-        is AlertsUiState.Error -> {
-            Box(
-                modifier = modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Error de conexión:\n${state.message}",
-                    color = MaterialTheme.colorScheme.error,
-                    fontSize = 14.sp
-                )
-            }
-        }
-        is AlertsUiState.Success -> {
-            AlertsScreenContent(
-                modifier = modifier,
-                alerts = state.alerts
-            )
-        }
+        is UiState.Loading -> LoadingState(modifier = modifier)
+
+        is UiState.Error -> ErrorState(
+            message = "Error de conexión:\n${state.message}",
+            modifier = modifier
+        )
+
+        is UiState.Success -> AlertsScreenContent(
+            modifier = modifier,
+            alerts = state.data
+        )
     }
 }
 
@@ -102,17 +90,12 @@ fun AlertsScreenContent(
         contentAlignment = Alignment.TopCenter
     ) {
         if (alerts.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "No hay alertas registradas",
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                    fontSize = 16.sp
-                )
-            }
+            EmptyState(message = "No hay alertas registradas")
         } else {
+            // El agrupado ordena por fecha cuando el documento la trae y manda al final las
+            // alertas cuya sección no se reconoce, para que no desaparezcan de la pantalla.
+            val sections = remember(alerts) { groupAlertsBySection(alerts) }
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -121,26 +104,20 @@ fun AlertsScreenContent(
             ) {
                 HistoryTab()
 
-                val sectionsOrder = listOf("Nuevo", "Esta Semana", "Este Mes", "Mes Pasado")
+                sections.forEach { section ->
+                    SectionDivider(
+                        title = section.title,
+                        itItsNew = section.title.equals(Alert.SECTION_NEW, ignoreCase = true)
+                    )
 
-                sectionsOrder.forEach { sectionTitle ->
-                    val sectionAlerts = alerts.filter { it.section.equals(sectionTitle, ignoreCase = true) }
-
-                    if (sectionAlerts.isNotEmpty()) {
-                        SectionDivider(
-                            title = sectionTitle,
-                            itItsNew = sectionTitle.equals("Nuevo", ignoreCase = true)
+                    section.alerts.forEach { alert ->
+                        AlertCard(
+                            title = alert.title,
+                            description = alert.description,
+                            time = alert.time,
+                            date = alert.date,
+                            colorStatus = parseColorStatus(alert.colorStatusType)
                         )
-
-                        sectionAlerts.forEach { alert ->
-                            AlertCard(
-                                title = alert.title,
-                                description = alert.description,
-                                time = alert.time,
-                                date = alert.date,
-                                colorStatus = parseColorStatus(alert.colorStatusType)
-                            )
-                        }
                     }
                 }
             }
@@ -162,7 +139,8 @@ fun AlertCard(
             .padding(vertical = 8.dp),
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.background,
-        border = BorderStroke(1.dp, Color(0xFFEEEEEE))
+        // Antes era un gris fijo que brillaba en modo oscuro.
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Row(
             modifier = Modifier
@@ -273,7 +251,7 @@ fun SectionDivider(title: String, itItsNew: Boolean = false) {
                 modifier = Modifier
                     .padding(end = 16.dp)
                     .size(12.dp)
-                    .background(color = Color.Red, shape = CircleShape)
+                    .background(color = Red40, shape = CircleShape)
             )
         }
 
@@ -287,10 +265,10 @@ fun SectionDivider(title: String, itItsNew: Boolean = false) {
 
 private fun parseColorStatus(type: String): Color {
     return when (type.uppercase()) {
-        "GREEN" -> Green40
-        "YELLOW" -> Yellow40
-        "BLUE" -> LightBlue40
-        "RED" -> Red40
+        Alert.COLOR_GREEN -> Green40
+        Alert.COLOR_YELLOW -> Yellow40
+        Alert.COLOR_BLUE -> LightBlue40
+        Alert.COLOR_RED -> Red40
         else -> Green40
     }
 }

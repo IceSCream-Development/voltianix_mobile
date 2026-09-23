@@ -1,37 +1,38 @@
 package com.icescream.voltianix.ui
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.firestore.FirebaseFirestore
 import com.icescream.voltianix.data.model.Vehicle
+import com.icescream.voltianix.data.repository.FleetRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
+/** Estado de la flota para la pantalla del mapa. */
 @HiltViewModel
 class FleetViewModel @Inject constructor(
-    private val firestore: FirebaseFirestore
+    repository: FleetRepository
 ) : ViewModel() {
 
-    private val _vehicles = MutableStateFlow<List<Vehicle>>(emptyList())
-    val vehicles: StateFlow<List<Vehicle>> = _vehicles.asStateFlow()
+    val uiState: StateFlow<UiState<List<Vehicle>>> = repository.observeVehicles()
+        .map<List<Vehicle>, UiState<List<Vehicle>>> { UiState.Success(it) }
+        .catch { error ->
+            Log.e(TAG, "Error al escuchar la colección de vehículos", error)
+            emit(UiState.Error(error.message ?: "No se pudo conectar con el servidor"))
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
+            initialValue = UiState.Loading
+        )
 
-    init {
-        fetchVehiclesFromFirestore()
-    }
-
-    private fun fetchVehiclesFromFirestore() {
-        firestore.collection("vehicles")
-            .addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null) {
-                    return@addSnapshotListener
-                }
-                val vehicleList = snapshot.documents.mapNotNull { doc ->
-                    doc.toObject(Vehicle::class.java)?.copy(id = doc.id)
-                }
-                _vehicles.value = vehicleList
-            }
+    private companion object {
+        const val TAG = "FleetViewModel"
+        const val STOP_TIMEOUT_MILLIS = 5_000L
     }
 }

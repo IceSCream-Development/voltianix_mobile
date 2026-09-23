@@ -2,7 +2,6 @@ package com.icescream.voltianix.ui.screens.map
 
 import android.view.MotionEvent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,32 +19,45 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.icescream.voltianix.data.FleetConfig
+import com.icescream.voltianix.data.model.Vehicle
 import com.icescream.voltianix.ui.FleetViewModel
-import org.osmdroid.config.Configuration
+import com.icescream.voltianix.ui.UiState
+import com.icescream.voltianix.ui.theme.Green40
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Overlay
 
-val SearchBarGray = Color(0xFF5E5E5E)
-val CustomGreen = Color(0xFF38C172)
+/** Centro del mapa mientras no hay coordenadas de la unidad: Aguascalientes. */
+private val DEFAULT_CENTER = GeoPoint(21.88234, -102.28259)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
     viewModel: FleetViewModel = hiltViewModel()
 ) {
-    val context = LocalContext.current
-    val vehicles by viewModel.vehicles.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    val selectedVehicle = vehicles.find { it.id == "EV-01" } ?: vehicles.firstOrNull()
+    val vehicles = when (val state = uiState) {
+        is UiState.Success -> state.data
+        else -> emptyList()
+    }
+    // Solo se pueden dibujar las unidades que traen coordenadas usables.
+    val locatedVehicles = vehicles.filter { it.location != null }
+    val selectedVehicle = vehicles.find { it.id == FleetConfig.DEFAULT_VEHICLE_ID }
+        ?: vehicles.firstOrNull()
+
     var searchQuery by remember { mutableStateOf("") }
     var mapViewRef by remember { mutableStateOf<MapView?>(null) }
 
@@ -54,133 +66,42 @@ fun MapScreen(
 
     val scaffoldState = rememberBottomSheetScaffoldState()
 
-    // --- MODO OSCURO DINÁMICO (Para UI de Compose) ---
-    val isDark = isSystemInDarkTheme()
-    val cardBackground = if (isDark) Color(0xFF2D2D2D) else Color.White
-    val textColor = if (isDark) Color.White else Color(0xFF2B2B2B)
-    val subtitleColor = if (isDark) Color(0xFFA0A0A0) else Color.Gray
-    val searchBarBg = if (isDark) Color(0xFF2D2D2D) else Color.White
-    val searchIconBg = if (isDark) Color(0xFF3E3E3E) else SearchBarGray
-    val dividerColor = if (isDark) Color(0xFF3E3E3E) else Color(0xFFE0E0E0)
-
-    LaunchedEffect(Unit) {
-        Configuration.getInstance().userAgentValue = context.packageName
+    // osmdroid necesita saber cuándo la pantalla se pausa para soltar sus recursos.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> mapViewRef?.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapViewRef?.onPause()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
         sheetPeekHeight = 90.dp,
         sheetShape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        sheetContainerColor = cardBackground,
+        sheetContainerColor = MaterialTheme.colorScheme.surface,
         sheetContent = {
-            // --- CONTENIDO DESPLEGABLE DE LA TARJETA ---
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = selectedVehicle?.name ?: "EV-001",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor
+            // La tarjeta dice qué está pasando en lugar de inventar datos mientras carga.
+            when (val state = uiState) {
+                is UiState.Loading -> SheetMessage(title = "Cargando unidad...")
+
+                is UiState.Error -> SheetMessage(
+                    title = "Sin conexión con el servidor",
+                    detail = state.message,
+                    isError = true
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider(color = dividerColor, thickness = 1.dp)
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 1. ESTADO
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(textColor)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text("Estado", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = textColor)
-                        Text(
-                            text = if (selectedVehicle?.status == "en_ruta") "En Ruta" else selectedVehicle?.status ?: "En Ruta",
-                            fontSize = 13.sp,
-                            color = subtitleColor
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 2. BATERÍA CON BARRA DE PROGRESO VERDE
-                val batteryVal = selectedVehicle?.battery ?: 85
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.BatteryChargingFull,
-                        contentDescription = "Batería",
-                        tint = textColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Batería", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = textColor)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            LinearProgressIndicator(
-                                progress = { batteryVal / 100f },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(8.dp)
-                                    .clip(RoundedCornerShape(4.dp)),
-                                color = CustomGreen,
-                                trackColor = dividerColor
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = "$batteryVal%",
-                                fontSize = 13.sp,
-                                color = subtitleColor,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 3. AUTONOMÍA RESTANTE
-                val rangeKm = (batteryVal * 2.92).toInt()
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.FlashOn,
-                        contentDescription = "Autonomía",
-                        tint = textColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text("Autonomía Restante", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = textColor)
-                        Text("$rangeKm km", fontSize = 13.sp, color = subtitleColor)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 4. PRÓXIMA RECARGA RECOMENDADA
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.AccessTime,
-                        contentDescription = "Recarga",
-                        tint = textColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text("Próxima Recarga Recomendada", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = textColor)
-                        Text("${selectedVehicle?.nextChargeKm ?: 18} km", fontSize = 13.sp, color = subtitleColor)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
+                is UiState.Success -> selectedVehicle?.let { vehicle ->
+                    VehicleSummary(vehicle = vehicle)
+                } ?: SheetMessage(
+                    title = "Sin datos de la unidad",
+                    detail = "No se encontró ${FleetConfig.DEFAULT_VEHICLE_ID} en la base de datos"
+                )
             }
         }
     ) { innerPadding ->
@@ -198,7 +119,7 @@ fun MapScreen(
                         setTileSource(TileSourceFactory.MAPNIK)
                         setMultiTouchControls(true)
                         controller.setZoom(15.0)
-                        controller.setCenter(GeoPoint(21.88234, -102.28259))
+                        controller.setCenter(DEFAULT_CENTER)
 
                         // Overlay para capturar cuando el usuario arrastra libremente el mapa
                         val touchOverlay = object : Overlay() {
@@ -220,21 +141,27 @@ fun MapScreen(
                     mapView.overlays.clear()
                     touchOverlay?.let { mapView.overlays.add(it) }
 
-                    vehicles.forEach { vehicle ->
-                        val vehiclePoint = GeoPoint(vehicle.location.latitude, vehicle.location.longitude)
+                    locatedVehicles.forEach { vehicle ->
+                        val location = vehicle.location ?: return@forEach
+                        val vehiclePoint = GeoPoint(location.latitude, location.longitude)
                         val marker = Marker(mapView).apply {
                             position = vehiclePoint
-                            title = vehicle.name
+                            title = vehicle.displayName
                             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                         }
                         mapView.overlays.add(marker)
 
-                        // Solo persigue automáticamente al vehículo si 'isTrackingVehicle' está en true
+                        // Solo persigue al vehículo si el seguimiento sigue activo.
                         if (isTrackingVehicle && vehicle.id == selectedVehicle?.id) {
                             mapView.controller.animateTo(vehiclePoint)
                         }
                     }
                     mapView.invalidate()
+                },
+                onRelease = { mapView ->
+                    // Sin esto osmdroid deja hilos y caché de teselas vivos al salir de la pantalla.
+                    mapView.onDetach()
+                    mapViewRef = null
                 }
             )
 
@@ -243,14 +170,13 @@ fun MapScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
-                    .statusBarsPadding()
             ) {
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     shape = RoundedCornerShape(8.dp),
-                    color = searchBarBg,
+                    color = MaterialTheme.colorScheme.surface,
                     shadowElevation = 4.dp
                 ) {
                     Row(
@@ -263,28 +189,44 @@ fun MapScreen(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .width(48.dp)
-                                .background(searchIconBg),
+                                .background(MaterialTheme.colorScheme.primary),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menú", tint = Color.White)
+                            // TODO: abrir el menú lateral cuando exista.
+                            Icon(
+                                Icons.Default.Menu,
+                                contentDescription = "Menú",
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
                         }
                         TextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
-                            placeholder = { Text("Buscar", color = subtitleColor, fontSize = 14.sp) },
+                            placeholder = {
+                                Text(
+                                    "Buscar",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 14.sp
+                                )
+                            },
                             modifier = Modifier.weight(1f),
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = Color.Transparent,
                                 unfocusedContainerColor = Color.Transparent,
                                 focusedIndicatorColor = Color.Transparent,
                                 unfocusedIndicatorColor = Color.Transparent,
-                                focusedTextColor = textColor,
-                                unfocusedTextColor = textColor
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                             ),
                             singleLine = true
                         )
+                        // TODO: la búsqueda todavía no filtra nada.
                         IconButton(onClick = {}) {
-                            Icon(Icons.Default.Search, contentDescription = "Buscar", tint = subtitleColor)
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = "Buscar",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
@@ -300,9 +242,10 @@ fun MapScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 FloatingActionButton(
-                    onClick = { /* Estaciones */ },
-                    containerColor = searchBarBg,
-                    contentColor = if (isDark) Color.White else Color(0xFF4A4A4A),
+                    // TODO: mostrar las estaciones de carga.
+                    onClick = { },
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(48.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -311,15 +254,14 @@ fun MapScreen(
 
                 FloatingActionButton(
                     onClick = {
-                        selectedVehicle?.let { vehicle ->
-                            isTrackingVehicle = true
-                            mapViewRef?.controller?.animateTo(
-                                GeoPoint(vehicle.location.latitude, vehicle.location.longitude)
-                            )
-                        }
+                        val location = selectedVehicle?.location ?: return@FloatingActionButton
+                        isTrackingVehicle = true
+                        mapViewRef?.controller?.animateTo(
+                            GeoPoint(location.latitude, location.longitude)
+                        )
                     },
-                    containerColor = searchBarBg,
-                    contentColor = if (isTrackingVehicle) CustomGreen else if (isDark) Color.White else Color(0xFF4A4A4A),
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = if (isTrackingVehicle) Green40 else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(48.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -327,5 +269,161 @@ fun MapScreen(
                 }
             }
         }
+    }
+}
+
+/** Resumen de la unidad dentro de la tarjeta deslizable. */
+@Composable
+private fun VehicleSummary(vehicle: Vehicle) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = vehicle.displayName,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 1. ESTADO
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.onSurface)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            SummaryTexts(title = "Estado", value = vehicle.statusLabel)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 2. BATERÍA CON BARRA DE PROGRESO VERDE
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.BatteryChargingFull,
+                contentDescription = "Batería",
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Batería",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    LinearProgressIndicator(
+                        progress = { vehicle.battery / 100f },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp)),
+                        color = Green40,
+                        trackColor = MaterialTheme.colorScheme.outline
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "${vehicle.battery}%",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 3. AUTONOMÍA RESTANTE
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.FlashOn,
+                contentDescription = "Autonomía",
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            SummaryTexts(
+                title = "Autonomía Restante",
+                value = "${vehicle.remainingRangeKm} km"
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 4. PRÓXIMA RECARGA RECOMENDADA
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.AccessTime,
+                contentDescription = "Recarga",
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            SummaryTexts(
+                title = "Próxima Recarga Recomendada",
+                value = "${vehicle.nextRechargeKm} km"
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+    }
+}
+
+@Composable
+private fun SummaryTexts(title: String, value: String) {
+    Column {
+        Text(
+            text = title,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = value,
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/** Mensaje dentro de la tarjeta cuando no hay datos que mostrar. */
+@Composable
+private fun SheetMessage(title: String, detail: String? = null, isError: Boolean = false) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 16.dp)
+    ) {
+        Text(
+            text = title,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (isError) {
+                MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            }
+        )
+        if (detail != null) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = detail,
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.height(20.dp))
     }
 }

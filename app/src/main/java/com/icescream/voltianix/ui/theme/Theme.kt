@@ -16,21 +16,36 @@ import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
     primary = Grey80,
+    onPrimary = White80,
     secondary = White80,
     tertiary = Blue80,
+    // Superficies: las usan la tarjeta del mapa, la barra de búsqueda y los botones flotantes.
+    surface = Dark30,
+    onSurface = White80,
+    surfaceVariant = Grey60,
+    onSurfaceVariant = Grey70,
+    outline = Grey60,
     outlineVariant = White80,
     background = Dark40,
-    onBackground = White80
-
+    onBackground = White80,
+    error = Red80
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = Grey40,
+    onPrimary = White80,
     secondary = White80,
     tertiary = Blue40,
+    // Superficies: las usan la tarjeta del mapa, la barra de búsqueda y los botones flotantes.
+    surface = White80,
+    onSurface = Dark40,
+    surfaceVariant = Grey20,
+    onSurfaceVariant = Grey40,
+    outline = Grey20,
     outlineVariant = Dark40,
     background = White80,
-    onBackground = Dark40
+    onBackground = Dark40,
+    error = Red40
 
 
     /* Other default colors to override
