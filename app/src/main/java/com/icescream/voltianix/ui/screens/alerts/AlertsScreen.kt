@@ -3,11 +3,11 @@ package com.icescream.voltianix.ui.screens.alerts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material3.HorizontalDivider
@@ -35,6 +35,7 @@ import com.icescream.voltianix.ui.components.EmptyState
 import com.icescream.voltianix.ui.components.ErrorState
 import com.icescream.voltianix.ui.components.LoadingState
 import com.icescream.voltianix.ui.theme.Green40
+import com.icescream.voltianix.ui.theme.Grey40
 import com.icescream.voltianix.ui.theme.LightBlue40
 import com.icescream.voltianix.ui.theme.Red40
 import com.icescream.voltianix.ui.theme.VoltianixTheme
@@ -68,7 +69,8 @@ fun AlertsScreen(
 
         is UiState.Error -> ErrorState(
             message = "Error de conexión:\n${state.message}",
-            modifier = modifier
+            modifier = modifier,
+            onRetry = viewModel::retry
         )
 
         is UiState.Success -> AlertsScreenContent(
@@ -96,21 +98,25 @@ fun AlertsScreenContent(
             // alertas cuya sección no se reconoce, para que no desaparezcan de la pantalla.
             val sections = remember(alerts) { groupAlertsBySection(alerts) }
 
-            Column(
+            // LazyColumn y no Column con scroll: el historial no tiene tope de tamaño y así
+            // solo se componen y miden las tarjetas que se alcanzan a ver.
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 32.dp)
-                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(vertical = 32.dp)
             ) {
-                HistoryTab()
+                item { HistoryTab() }
 
                 sections.forEach { section ->
-                    SectionDivider(
-                        title = section.title,
-                        itItsNew = section.title.equals(Alert.SECTION_NEW, ignoreCase = true)
-                    )
+                    item(key = "seccion-${section.title}") {
+                        SectionDivider(
+                            title = section.title,
+                            itItsNew = section.title.equals(Alert.SECTION_NEW, ignoreCase = true)
+                        )
+                    }
 
-                    section.alerts.forEach { alert ->
+                    items(section.alerts, key = { alert -> alert.id }) { alert ->
                         AlertCard(
                             title = alert.title,
                             description = alert.description,
@@ -263,13 +269,17 @@ fun SectionDivider(title: String, itItsNew: Boolean = false) {
     }
 }
 
+/**
+ * El valor que no se reconoce cae en gris, no en verde: un "ORANGE" o un campo mal escrito
+ * pintaba una alerta crítica con el color de "todo bien".
+ */
 private fun parseColorStatus(type: String): Color {
     return when (type.uppercase()) {
         Alert.COLOR_GREEN -> Green40
         Alert.COLOR_YELLOW -> Yellow40
         Alert.COLOR_BLUE -> LightBlue40
         Alert.COLOR_RED -> Red40
-        else -> Green40
+        else -> Grey40
     }
 }
 

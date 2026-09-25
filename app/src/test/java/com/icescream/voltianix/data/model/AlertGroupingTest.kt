@@ -20,6 +20,21 @@ class AlertGroupingTest {
     }
 
     @Test
+    fun `mas de un ano cae en Mas Antiguas y no en Mes Pasado`() {
+        assertEquals(Alert.SECTION_LAST_MONTH, sectionFor(alert(createdAt = daysAgo(200)), now))
+        assertEquals(Alert.SECTION_OLDER, sectionFor(alert(createdAt = daysAgo(400)), now))
+    }
+
+    @Test
+    fun `una fecha adelantada al reloj del celular se queda en Nuevo`() {
+        // El servidor puede ir unos segundos adelante: la resta sale negativa y antes eso
+        // mandaba la alerta a la sección equivocada.
+        val future = Date(now.time + TimeUnit.MINUTES.toMillis(5))
+
+        assertEquals(Alert.SECTION_NEW, sectionFor(alert(createdAt = future), now))
+    }
+
+    @Test
     fun `sin fecha se respeta la seccion guardada en Firestore`() {
         val stored = alert(section = Alert.SECTION_MONTH)
 

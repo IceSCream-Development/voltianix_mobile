@@ -27,6 +27,12 @@ data class Alert(
         const val SECTION_MONTH = "Este Mes"
         const val SECTION_LAST_MONTH = "Mes Pasado"
 
+        /**
+         * Más de un año. Sin esta sección, "Mes Pasado" era un cajón sin fondo donde
+         * terminaba una alerta de hace dos años.
+         */
+        const val SECTION_OLDER = "Más Antiguas"
+
         /** Para las alertas cuya sección no es ninguna de las conocidas. */
         const val SECTION_OTHER = "Otras"
 
@@ -35,6 +41,12 @@ data class Alert(
         const val COLOR_BLUE = "BLUE"
         const val COLOR_RED = "RED"
 
-        val SECTION_ORDER = listOf(SECTION_NEW, SECTION_WEEK, SECTION_MONTH, SECTION_LAST_MONTH)
+        val SECTION_ORDER = listOf(
+            SECTION_NEW,
+            SECTION_WEEK,
+            SECTION_MONTH,
+            SECTION_LAST_MONTH,
+            SECTION_OLDER
+        )
     }
 }

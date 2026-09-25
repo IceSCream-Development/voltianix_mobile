@@ -42,6 +42,32 @@ import org.osmdroid.views.overlay.Overlay
 /** Centro del mapa mientras no hay coordenadas de la unidad: Aguascalientes. */
 private val DEFAULT_CENTER = GeoPoint(21.88234, -102.28259)
 
+/**
+ * Una unidad lista para dibujarse.
+ *
+ * Guarda la latitud y la longitud sueltas, y no un GeoPoint, para poder comparar dos listas de
+ * marcadores con `==` sin depender de cómo osmdroid implemente la igualdad.
+ */
+private data class VehicleMarker(
+    val id: String,
+    val title: String,
+    val latitude: Double,
+    val longitude: Double
+) {
+    fun point(): GeoPoint = GeoPoint(latitude, longitude)
+}
+
+/**
+ * Lo último que se dibujó en el mapa.
+ *
+ * A propósito no es estado de Compose: se escribe desde el bloque `update` del AndroidView y
+ * no debe disparar otra recomposición.
+ */
+private class MapRenderState {
+    var markers: List<VehicleMarker> = emptyList()
+    var cameraTarget: VehicleMarker? = null
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
@@ -54,9 +80,24 @@ fun MapScreen(
         else -> emptyList()
     }
     // Solo se pueden dibujar las unidades que traen coordenadas usables.
-    val locatedVehicles = vehicles.filter { it.location != null }
+    val markers = remember(vehicles) {
+        vehicles.mapNotNull { vehicle ->
+            vehicle.location?.let { location ->
+                VehicleMarker(
+                    id = vehicle.id,
+                    title = vehicle.displayName,
+                    latitude = location.latitude,
+                    longitude = location.longitude
+                )
+            }
+        }
+    }
     val selectedVehicle = vehicles.find { it.id == FleetConfig.DEFAULT_VEHICLE_ID }
         ?: vehicles.firstOrNull()
+    val selectedMarker = markers.find { it.id == selectedVehicle?.id }
+
+    // Lo último que se alcanzó a dibujar, para no rehacer el mapa en cada recomposición.
+    val renderState = remember { MapRenderState() }
 
     var searchQuery by remember { mutableStateOf("") }
     var mapViewRef by remember { mutableStateOf<MapView?>(null) }
@@ -93,7 +134,8 @@ fun MapScreen(
                 is UiState.Error -> SheetMessage(
                     title = "Sin conexión con el servidor",
                     detail = state.message,
-                    isError = true
+                    isError = true,
+                    onRetry = viewModel::retry
                 )
 
                 is UiState.Success -> selectedVehicle?.let { vehicle ->
@@ -136,27 +178,41 @@ fun MapScreen(
                     }
                 },
                 update = { mapView ->
-                    // Mantenemos el touchOverlay en la posición 0 y actualizamos los demás
-                    val touchOverlay = mapView.overlays.firstOrNull()
-                    mapView.overlays.clear()
-                    touchOverlay?.let { mapView.overlays.add(it) }
-
-                    locatedVehicles.forEach { vehicle ->
-                        val location = vehicle.location ?: return@forEach
-                        val vehiclePoint = GeoPoint(location.latitude, location.longitude)
-                        val marker = Marker(mapView).apply {
-                            position = vehiclePoint
-                            title = vehicle.displayName
-                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                    // update corre en CADA recomposición, incluso al escribir una letra en el
+                    // buscador. Antes eso borraba y recreaba los marcadores y llamaba animateTo,
+                    // así que el mapa se le regresaba al usuario mientras veía otra zona.
+                    // Ahora se compara contra lo último dibujado y solo se toca lo que cambió.
+                    if (markers != renderState.markers) {
+                        // Solo los marcadores: el touchOverlay de la posición 0 se queda.
+                        mapView.overlays.filterIsInstance<Marker>().forEach { marker ->
+                            // Sin onDetach queda colgada la ventana de información del marcador.
+                            marker.onDetach(mapView)
+                            mapView.overlays.remove(marker)
                         }
-                        mapView.overlays.add(marker)
 
-                        // Solo persigue al vehículo si el seguimiento sigue activo.
-                        if (isTrackingVehicle && vehicle.id == selectedVehicle?.id) {
-                            mapView.controller.animateTo(vehiclePoint)
+                        markers.forEach { vehicleMarker ->
+                            mapView.overlays.add(
+                                Marker(mapView).apply {
+                                    position = vehicleMarker.point()
+                                    title = vehicleMarker.title
+                                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                                }
+                            )
                         }
+
+                        renderState.markers = markers
+                        mapView.invalidate()
                     }
-                    mapView.invalidate()
+
+                    // La cámara persigue a la unidad solo si el seguimiento sigue activo y el
+                    // destino cambió de verdad.
+                    if (isTrackingVehicle &&
+                        selectedMarker != null &&
+                        selectedMarker != renderState.cameraTarget
+                    ) {
+                        mapView.controller.animateTo(selectedMarker.point())
+                        renderState.cameraTarget = selectedMarker
+                    }
                 },
                 onRelease = { mapView ->
                     // Sin esto osmdroid deja hilos y caché de teselas vivos al salir de la pantalla.
@@ -254,11 +310,10 @@ fun MapScreen(
 
                 FloatingActionButton(
                     onClick = {
-                        val location = selectedVehicle?.location ?: return@FloatingActionButton
+                        val marker = selectedMarker ?: return@FloatingActionButton
                         isTrackingVehicle = true
-                        mapViewRef?.controller?.animateTo(
-                            GeoPoint(location.latitude, location.longitude)
-                        )
+                        mapViewRef?.controller?.animateTo(marker.point())
+                        renderState.cameraTarget = marker
                     },
                     containerColor = MaterialTheme.colorScheme.surface,
                     contentColor = if (isTrackingVehicle) Green40 else MaterialTheme.colorScheme.onSurface,
@@ -400,7 +455,12 @@ private fun SummaryTexts(title: String, value: String) {
 
 /** Mensaje dentro de la tarjeta cuando no hay datos que mostrar. */
 @Composable
-private fun SheetMessage(title: String, detail: String? = null, isError: Boolean = false) {
+private fun SheetMessage(
+    title: String,
+    detail: String? = null,
+    isError: Boolean = false,
+    onRetry: (() -> Unit)? = null
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -423,6 +483,15 @@ private fun SheetMessage(title: String, detail: String? = null, isError: Boolean
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+        if (onRetry != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = onRetry,
+                colors = ButtonDefaults.buttonColors(containerColor = Green40)
+            ) {
+                Text(text = "Reintentar")
+            }
         }
         Spacer(modifier = Modifier.height(20.dp))
     }

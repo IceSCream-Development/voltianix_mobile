@@ -18,4 +18,11 @@ object FleetConfig {
     const val VEHICLES_COLLECTION = "vehicles"
 
     const val ALERTS_COLLECTION = "alerts"
+
+    /**
+     * Cuántas alertas se traen del historial.
+     *
+     * El historial solo crece; sin tope, cada arranque descargaba la colección completa.
+     */
+    const val ALERTS_LIMIT = 200L
 }

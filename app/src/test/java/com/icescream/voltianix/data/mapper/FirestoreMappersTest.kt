@@ -1,6 +1,7 @@
 package com.icescream.voltianix.data.mapper
 
 import com.google.firebase.firestore.GeoPoint
+import com.icescream.voltianix.data.model.Alert
 import com.icescream.voltianix.data.model.DemoVehicleData
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -121,5 +122,33 @@ class FirestoreMappersTest {
         assertEquals("Batería baja", alert.title)
         assertEquals("YELLOW", alert.colorStatusType)
         assertNull(alert.createdAt)
+    }
+
+    @Test
+    fun `un campo vacio no bloquea el respaldo al formato viejo`() {
+        // Un documento a medio migrar: el campo nuevo existe pero está en blanco. Antes esto
+        // devolvía el valor por defecto y una alerta crítica se pintaba de verde.
+        val alert = alertFrom(
+            id = "a2",
+            data = mapOf(
+                "colorStatusType" to "",
+                "color" to Alert.COLOR_RED
+            )
+        )
+
+        assertEquals(Alert.COLOR_RED, alert.colorStatusType)
+    }
+
+    @Test
+    fun `un nombre vacio cae al campo viejo antes que al id`() {
+        val vehicle = vehicleFrom(
+            id = "doc-abc123",
+            data = mapOf(
+                "name" to "",
+                "vehicleId" to "EV-01"
+            )
+        )
+
+        assertEquals("EV-01", vehicle.name)
     }
 }

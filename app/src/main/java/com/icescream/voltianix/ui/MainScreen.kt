@@ -35,7 +35,10 @@ import com.icescream.voltianix.ui.screens.unit.UnitScreen
 fun MainScreen() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
+    // En el primer frame el NavHost todavía no tiene destino, así que sin este respaldo no se
+    // dibujaba el encabezado y el contenido brincaba hacia abajo un frame después, en cada
+    // arranque en frío.
+    val currentRoute = navBackStackEntry?.destination?.route ?: NavDestination.Map.route
 
     Scaffold(
         topBar = {

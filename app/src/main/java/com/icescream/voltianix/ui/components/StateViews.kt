@@ -1,8 +1,14 @@
 package com.icescream.voltianix.ui.components
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -25,14 +31,24 @@ fun LoadingState(modifier: Modifier = Modifier) {
     }
 }
 
-/** Mensaje de error. Antes solo las alertas mostraban algo cuando Firestore fallaba. */
+/**
+ * Mensaje de error. Antes solo las alertas mostraban algo cuando Firestore fallaba.
+ *
+ * Con [onRetry] aparece el botón para volver a intentar: sin él, un error de red al abrir la
+ * app dejaba la pantalla atorada hasta cerrarla.
+ */
 @Composable
-fun ErrorState(message: String, modifier: Modifier = Modifier) {
-    Box(
+fun ErrorState(
+    message: String,
+    modifier: Modifier = Modifier,
+    onRetry: (() -> Unit)? = null
+) {
+    Column(
         modifier = modifier
             .fillMaxSize()
             .padding(24.dp),
-        contentAlignment = Alignment.Center
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Text(
             text = message,
@@ -40,6 +56,16 @@ fun ErrorState(message: String, modifier: Modifier = Modifier) {
             fontSize = 14.sp,
             textAlign = TextAlign.Center
         )
+
+        if (onRetry != null) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = onRetry,
+                colors = ButtonDefaults.buttonColors(containerColor = Green40)
+            ) {
+                Text(text = "Reintentar")
+            }
+        }
     }
 }
 

@@ -46,25 +46,42 @@ data class Vehicle(
     val displayName: String
         get() = name.ifBlank { id }
 
-    /** Estado legible. Antes esta traducción estaba suelta dentro del mapa. */
+    /**
+     * Estado legible. Antes esta traducción estaba suelta dentro del mapa y solo cubría
+     * "en_ruta": cualquier otro estado salía en pantalla con guiones bajos, tal como viene
+     * de la base de datos.
+     */
     val statusLabel: String
-        get() = when {
-            status.equals("en_ruta", ignoreCase = true) -> "En Ruta"
-            status.isBlank() -> "Sin datos"
-            else -> status
+        get() = when (val normalized = status.trim().lowercase()) {
+            "" -> "Sin datos"
+            "en_ruta", "en ruta" -> "En Ruta"
+            "en_carga", "cargando" -> "Cargando"
+            "disponible", "inactivo" -> "Disponible"
+            "mantenimiento", "en_mantenimiento" -> "En Mantenimiento"
+            "fuera_de_servicio" -> "Fuera de Servicio"
+            else -> normalized.replace('_', ' ')
+                .split(' ')
+                .joinToString(" ") { word -> word.replaceFirstChar(Char::uppercaseChar) }
         }
 
     /** Autonomía estimada: 100 % de batería ≈ 292 km. */
     val remainingRangeKm: Int
         get() = (battery * KM_PER_BATTERY_PERCENT).toInt()
 
-    /** Próxima recarga recomendada según la carga actual. */
+    /**
+     * Kilómetros que quedan antes de tocar la reserva, o sea hasta dónde se puede llegar
+     * sin recargar.
+     *
+     * Antes era `battery * 0.8`, un porcentaje mostrado como si fueran kilómetros: con 85 %
+     * decía "68 km" al lado de "Autonomía Restante: 248 km".
+     */
     val nextRechargeKm: Int
-        get() = if (battery > LOW_BATTERY_PERCENT) (battery * 0.8).toInt() else MIN_RECHARGE_KM
+        get() = ((battery - RESERVE_BATTERY_PERCENT).coerceAtLeast(0) * KM_PER_BATTERY_PERCENT).toInt()
 
     companion object {
         const val KM_PER_BATTERY_PERCENT = 2.92
-        private const val LOW_BATTERY_PERCENT = 20
-        private const val MIN_RECHARGE_KM = 5
+
+        /** Carga que se deja de reserva antes de recomendar la recarga. */
+        private const val RESERVE_BATTERY_PERCENT = 20
     }
 }

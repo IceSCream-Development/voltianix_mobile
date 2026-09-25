@@ -32,7 +32,11 @@ fun UnitScreen(
     when (val state = uiState) {
         is UiState.Loading -> LoadingState(modifier = modifier)
 
-        is UiState.Error -> ErrorState(message = state.message, modifier = modifier)
+        is UiState.Error -> ErrorState(
+            message = state.message,
+            modifier = modifier,
+            onRetry = viewModel::retry
+        )
 
         is UiState.Success -> UnitScreenContent(
             modifier = modifier,

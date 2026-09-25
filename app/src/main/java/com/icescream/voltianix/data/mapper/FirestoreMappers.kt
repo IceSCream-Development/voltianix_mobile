@@ -69,8 +69,16 @@ fun DocumentSnapshot.toAlert(): Alert = alertFrom(id, data.orEmpty())
 
 // --- Lectores tolerantes ---
 
+/**
+ * Primer valor de texto utilizable entre varias llaves.
+ *
+ * El descarte del texto vacío va dentro del lambda a propósito: si se hace después,
+ * `firstNotNullOfOrNull` se queda con la primera llave que sea String aunque venga en blanco y
+ * ya no revisa las demás, así que un documento con `{"colorStatusType": "", "color": "RED"}`
+ * terminaba en el valor por defecto en vez de caer al formato viejo.
+ */
 private fun Map<String, Any?>.string(vararg keys: String): String? =
-    keys.firstNotNullOfOrNull { this[it] as? String }?.takeIf { it.isNotBlank() }
+    keys.firstNotNullOfOrNull { (this[it] as? String)?.takeIf(String::isNotBlank) }
 
 private fun Map<String, Any?>.number(vararg keys: String): Double? =
     keys.firstNotNullOfOrNull { this[it] as? Number }?.toDouble()
